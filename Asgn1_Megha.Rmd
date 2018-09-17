@@ -1,0 +1,48 @@
+---
+title: "MA615 - Assignment 1"
+author: "Megha Pandit"
+date: "September 17, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+A sloppy printer produces books with an average of 2 misprints per page. You want to know how many pages in a 50 page book will have more than k misprints. Make an n x k table that shows the probability that n or fewer pages in a 50 page book will have more than k misprints.Show and explain your work. Include equations and calculations to teach the reader how to solve the problem. Include an image of a book.
+
+
+_The printer produces books with an average of 2 misprints per page. The misprints follow a poisson distribution. Therefore, the probability that a page will have more than k misprints is given by:_
+
+$$P(X > k) = 1 - P(X\leq k) = 1 - \sum_{x=0}^{k}\frac{\lambda^xe^{-\lambda}}{x!}$$
+_Since $\lambda$ is 2, we have_
+$$P(X > k) = 1 - \sum_{x=0}^{k}\frac{2^xe^{-2}}{x!}$$
+
+_The probability that n or fewer pages in the 50 page book will have more than k misprints is given by_      
+$$P(Y\leq n) = {50\choose k}\sum_{j=0}^{n}(1 - \sum_{x=0}^{k}\frac{2^xe^{-2}}{x!})^j(\sum_{x=0}^{k}\frac{2^xe^{-2}}{x!})^{n-j}$$
+
+```{r, echo=FALSE, fig.align='center'}
+library(knitr)
+include_graphics("C:/Users/GP/Desktop/MEGHA/RGitHub/MA615/book1.png") #Including image of a book
+```
+
+
+_The n x k table for the probabilities of fewer than n pages having more than k misprints is as follows:_
+
+```{r, echo=FALSE}
+prob2 <- matrix(c(rep(0,500)),nrow = 50, dimnames = list(c("n<=1",2:50), c("k > 0",1:9)))
+prob1 <- c()
+ for (n in 1:50){
+for (k in 0:9){
+  prob1[k] <- 1 - ppois(k, lambda = 2) #for probabilities of more than k misprints
+  prob2[n,k] <- pbinom(n, 50, prob = prob1[k]) #for probabilities of n or fewer pages having k misprints
+ }
+}  
+df <- as.data.frame(prob2)
+library(knitr)
+library(kableExtra) 
+kable(df, digits = 5, align = 'c') #table containing the probabilities
+```
+
