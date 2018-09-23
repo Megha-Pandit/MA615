@@ -1,0 +1,149 @@
+---
+title: "MA615 Assignment 2"
+author: "Megha Pandit"
+date: "September 22, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+R for Data Science
+
+3.5.1 Exercises
+
+2. What do the empty cells in plot with facet_grid(drv ~ cyl) mean? How do they relate to this plot?
+```{r, fig.align='center', fig.width= 3, fig.height= 3}
+library(ggplot2)
+data(mpg)
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = drv, y = cyl), size = 1)+
+  facet_grid(drv ~ cyl)
+```
+
+_\textcolor{blue}{The empty cells in the plot mean that there were no observations for those particular combinations of values, or, there are no rows in the original dataset that correspond to those particular combinations of variable values.}_   
+
+_\textcolor{blue}{In this plot, the empty cells mean that there are no rear wheel drive cars which have 4 cylinders or 5 cylinders and there are no 4 wheel drive cars which have 5 cylinders.}_
+
+
+3. What plots does the following code make? What does . do?
+
+```{r, echo=TRUE, fig.align='center', fig.width= 3, fig.height = 3, fig.show='hold'}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy), size = 1) +
+  facet_grid(drv ~ .)
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy), size = 1) +
+  facet_grid(. ~ cyl)
+```
+_\textcolor{blue}{The first code plots engine displacement vs highway miles per gallon for 4 wheel, front wheel and rear wheel drive cars. The second code plots the engine displacement vs highway miles per gallon for cars with 4,5,6,and 8 cylinders.}_
+
+_\textcolor{blue}{The . is like a placeholder that controls whether the faceting happens row wise or column wise. In the plot on the left side, (drv ~ .) plots the drv as rows, whereas in the plot on the right side, (. ~ cyl) plots the cyl as columns}_
+
+3.6.1 Exercises
+
+6. Recreate the R code necessary to generate the following graphs.
+```{r, fig.width=4, fig.height=3}
+ggplot(mpg)+
+  geom_point(aes(x = displ, y = hwy), size = 2)+
+  geom_smooth(aes(x= displ, y = hwy), se = FALSE, lwd = 1.5)
+```
+
+```{r, fig.width=4, fig.height=3}
+ggplot(mpg)+
+  geom_point(aes(x = displ, y = hwy), size = 2)+
+  geom_smooth(aes(x= displ, y = hwy, class = drv), se = FALSE, lwd = 1.5)
+```
+
+```{r, fig.width=4, fig.height=3}
+ggplot(mpg)+
+  geom_point(aes(x = displ, y = hwy, color = drv), size = 2)+
+  geom_smooth(aes(x= displ, y = hwy, class = drv, color = drv), se = FALSE, lwd = 1.5)
+```
+
+```{r, fig.width=4, fig.height=3}
+ggplot(mpg)+
+  geom_point(aes(x = displ, y = hwy, color = drv), size = 2)+
+  geom_smooth(aes(x= displ, y = hwy), se = FALSE, lwd = 1.5)
+```
+
+```{r, fig.width=4, fig.height=3}
+ggplot(mpg)+
+  geom_point(aes(x = displ, y = hwy, color = drv), size = 2)+
+  geom_smooth(aes(x= displ, y = hwy, linetype = drv), se = FALSE, lwd = 1.5)
+```
+
+```{r, fig.width=4, fig.height=3}
+ggplot(mpg, aes(x = displ, y = hwy))+
+  geom_point(size = 4, color = "white")+
+  geom_point(aes(color = drv))
+```
+
+5.2.4 Exercises
+
+Find all flights that:
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+library(dplyr)
+library(tidyverse)
+library(nycflights13)
+data(flights)
+```
+
+
+**\textcolor{red}{1. Had an arrival delay of two or more hours}**
+
+```{r}
+#Flights that had an arrival delay of two or more hours
+filter(flights, arr_delay >= 120)
+```
+
+
+**\textcolor{red}{2. Flew to Houston (IAH or HOU)}**
+
+```{r}
+#Flights that flew to Houston 
+filter(flights, dest %in% c("IAH" ,"HOU"))
+```
+
+
+**\textcolor{red}{3. Were operated by United, American, or Delta8}**
+
+```{r}
+#Flights that were operated by United, American or Delta
+filter(flights, carrier %in% c("UA", "AA", "DL"))
+```
+
+
+**\textcolor{red}{4. Departed in summer (July, August, and September)}**
+
+```{r}
+#Flights that departed in summer (July, August and September)
+filter(flights, month >= 7, month <= 9)
+```
+
+
+**\textcolor{red}{5. Arrived more than two hours late, but didn’t leave late}**
+
+```{r}
+#Flights that arrived more than 2 hours late but didn't leave late
+filter(flights, arr_delay > 120, dep_delay <= 0)
+```
+
+
+**\textcolor{red}{6. Were delayed by at least an hour, but made up over 30 minutes in flight}**
+
+**_\textcolor{blue}{If a flight is delayed by an hour, then it should arrive an hour late if it did not make up any time in the air. Therefore, if the flight made up over 30 mins in air, then the difference between the delay in departure and delay in arrival should be more than 30 mins.}_**
+
+```{r}
+#Flights that were delayed atleast by an hour, but made up over 30 minutes in flight
+filter(flights, dep_delay >= 60, (dep_delay - arr_delay > 30) )
+```
+
+
+**\textcolor{red}{7. Departed between midnight and 6am (inclusive)}**
+
+```{r}
+#Flights that departed between midnight and 6 am
+filter(flights, dep_time <= 600 | dep_time == 2400)
+```
