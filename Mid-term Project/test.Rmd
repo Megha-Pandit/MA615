@@ -1,0 +1,204 @@
+---
+title: "Spectator Attendance at Boston Celtics Home Games"
+author: "Megha"
+date: "October 18, 2018"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, echo = FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+```
+
+
+```{r, echo=FALSE}
+library(shiny)
+library(ggplot2)
+library(dplyr)
+library(readxl)
+
+library(rvest)
+library(tidyverse)
+
+#create a table to store Urls
+urls <- matrix(c(1:54),54,1)
+
+
+for( i in 2013:2018) {  # change the part of the year in urls
+  #use i in the string
+  i <- as.character(i)
+  
+  #create urls by the rule
+  OCT <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-october.html", sep = "_")
+  NOV <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-november.html", sep = "_")
+  DEC <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-december.html", sep = "_")
+  JAN <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-january.html", sep = "_")
+  FEB <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-february.html", sep = "_")
+  MAR <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-march.html", sep = "_")
+  APR <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-april.html", sep = "_")
+  MAY <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-may.html", sep = "_")
+  JUN <- paste("https://www.basketball-reference.com/leagues/NBA",i,"games-june.html", sep = "_")
+  
+  i <- as.numeric(i)
+  
+  #assign the links to our table
+  
+  urls[i-2012] <- OCT
+  urls[i-2012+6] <- NOV
+  urls[i-2012+12] <- DEC
+  urls[i-2012+18] <- JAN
+  urls[i-2012+24] <- FEB
+  urls[i-2012+30] <- MAR
+  urls[i-2012+36] <- APR
+  urls[i-2012+42] <- MAY
+  urls[i-2012+48] <- JUN
+}
+
+# 'Urls' has been created successfully.
+# Now Scrape data from the website by using our table
+for (i in 1:54){
+  templink <- read_html(urls[i])
+  a <- templink%>%html_nodes("table")%>%.[[1]]%>%html_table()
+  
+  #data transformation
+  colnames(a)[5] <- "City"
+  colnames(a)[4] <- "3"
+  colnames(a)[7] <- "1"
+  colnames(a)[8] <- "2"
+  a <- a %>%
+    select(Date,City,Attend.)%>%
+    filter(City =="Boston Celtics") 
+  
+  if (i == 1) {
+    table <- a
+  }
+  #conbime all the data into a single table
+  table <- rbind(a,table)
+}
+
+table$Date <- substr(table$Date,6,17)
+table$Date <- as.Date(table$Date,format='%B %d, %Y')
+
+weather <- read.csv("weather.csv")
+
+#merge two tables into one
+colnames(weather)[6] <- "Date"
+weather$Date <- as.Date(weather$Date)
+EDAtable <- left_join(table,weather, by = "Date")
+
+#clear out unnecessary data and edit on existing data
+EDAtable <-EDAtable%>% 
+  select(Date,Attend.,AWND,TAVG)
+EDAtable <- na.omit(EDAtable)
+EDAtable$Attend. <-as.numeric(gsub(",","",EDAtable$Attend.))
+AttendRate <- (EDAtable$Attend./18624) * 100
+AttendRate <- round(AttendRate,2)
+EDAtable <-cbind(EDAtable,AttendRate)  
+ 
+```
+**_Boston Celtics, one of the most popular and highly rated Basketball teams, was founded in 1946 as one of the original eight NBA teams. The home ground of the Celtics is the TD Garden in Boston. Here's a brief visual of the spectator attendance at Boston Celtics home games._**
+
+```{r, echo=FALSE}
+ui <- fluidPage(
+  h4("Average Wind Vs Attendance"),
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("slider", "Average Wind", min = 0, max = 30, step = 1, value = FALSE)
+    ),
+    mainPanel(
+      tabsetPanel(type = "tabs",
+                  tabPanel("Plot", plotOutput("weather")),
+                  tabPanel("Data", tableOutput("wind")))
+    )
+  )
+)
+server <- function(input, output){
+  output$weather <- renderPlot({
+    ggplot(data=EDAtable)+
+      geom_point(aes(x=AWND,y=AttendRate),color="blue")
+  })
+  output$wind <- renderDataTable({EDAtable})
+}
+shinyApp(ui = ui, server = server)
+```
+
+**_Attendance Vs Opponent Teams with games Won(W) and Lost(L)_**
+```{r, echo=FALSE}
+BCeltics <- read_excel("C:/Users/GP/Desktop/MEGHA/RGitHub/MA615/Mid-term Project/BCeltics.xlsx")
+b_celtics <- BCeltics %>%
+  mutate(year = substr(x= Date, start = 1, stop = 4)) %>%
+  group_by(year, Opponent, Attendance, Result) %>%
+  summarise()
+b_celtics <- as.data.frame(b_celtics)
+
+ui <- fluidPage(
+  h4("Attendance in terms of games Won(W) and Lost(L)"),
+  br(),
+  br(),
+  sidebarLayout(
+    sidebarPanel(
+      radioButtons("year", "Year", choices = c("2012", "2013", "2014", "2015", "2016", "All Years"), selected = "2012")
+    ),
+    mainPanel(
+        tabsetPanel(type = "tabs",
+                    tabPanel("Plot", plotOutput("celt")),
+                    tabPanel("Data", tableOutput("celtics")))
+)
+))
+
+server <- function(input, output) {
+  output$celt <- renderPlot({
+    
+    library(readxl)
+    BCeltics <- read_excel("C:/Users/GP/Desktop/MEGHA/RGitHub/MA615/Mid-term Project/BCeltics.xlsx")
+    names(BCeltics)[6] <- paste("OSP")
+    b_celtics <- BCeltics %>%
+      mutate(year = substr(x= Date, start = 1, stop = 4)) %>%
+      group_by(year, Opponent, Attendance, Result) %>%
+      summarise()
+    b_celtics <- as.data.frame(b_celtics)
+    attd <- BCeltics$Attendance*100/18624
+    
+    BCel <- BCeltics %>%
+      mutate(year = substr(x= Date, start = 1, stop = 4))%>%
+      group_by(year, Opponent, Attendance, OSP, Result) %>%
+      summarize()
+    
+      if (input$year == 2012){
+        ggplot(BCel)+
+          geom_point(data = BCel[1:13,], aes(x = Opponent, y = Attendance, color = Result), size = 2)+
+          theme(axis.text.x = element_text(angle = 90))}
+    
+      else if (input$year == 2013){
+        ggplot(BCel)+
+          geom_point(data = BCel[14:52,], aes(x = Opponent, y = Attendance, color = Result), size = 2)+
+          theme(axis.text.x = element_text(angle = 90))}
+    
+      else if (input$year == 2014){
+        ggplot(BCel)+
+          geom_point(data = BCel[53:91,], aes(x = Opponent, y = Attendance, color = Result), size = 2)+
+          theme(axis.text.x = element_text(angle = 90))}
+    
+      else if (input$year == 2015){
+        ggplot(BCel)+
+          geom_point(data = BCel[92:130,], aes(x = Opponent, y = Attendance, color = Result), size = 2)+
+          theme(axis.text.x = element_text(angle = 90))}
+    
+      else if (input$year == 2016){
+        ggplot(BCel)+
+          geom_point(data = BCel[131:153,], aes(x = Opponent, y = Attendance, color = Result), size = 2)+
+          theme(axis.text.x = element_text(angle = 90))}
+    
+      else if (input$year == "All Years"){
+        ggplot(BCel)+
+          geom_point(data = BCel, aes(x = Opponent, y = Attendance, color = Result), size = 2)+
+          theme(axis.text.x = element_text(angle = 90))
+      }
+    
+  })
+  output$celtics <- renderTable({BCel})
+}
+shinyApp(ui = ui, server = server)
+```
