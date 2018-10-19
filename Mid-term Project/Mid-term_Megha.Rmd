@@ -43,7 +43,7 @@ ggplot(BCeltics)+
   scale_color_manual(legend_tilte, values = c("palegreen3", "plum4"))
   
 ```
-**_The plot shows that the presence of a star player in the opponent team is accompanied with a consistent higher attendance compared to not having a star player in the opponent team._**
+**_The plot shows that the presence of a star player in the opponent team is accompanied with a higher attendance compared to not having a star player in the opponent team._**
 
 
 ```{r}
@@ -54,6 +54,7 @@ b_celtics <- BCeltics %>%
   group_by(year, Opponent, Attendance, Result) %>%
   summarise()
 b_celtics <- as.data.frame(b_celtics)
+
 #Famous rivalries - Atlanta Hawks, Brooklyn Nets, Detroit Pistons, Los Angeles Lakers, New York Knicks, Philadelphia 76ers, Washington Wizards
 
 #Boston Celtics Vs Rivals
@@ -62,7 +63,8 @@ ggplot(a_h)+
   geom_point(aes(x = Opponent, y = Attendance, color = Result))+
   theme(axis.text.x = element_text(angle = 90))+
   facet_grid(.~year)+
-  ylim(15000,19000)
+  ylim(15000,19000)+
+  ggtitle("Boston Celtics Vs Rivals")
 
 #Boston Celtics Vs Popular Teams
 b_h <- filter(b_celtics, b_celtics$Opponent %in% c("Golden State Warriors", "Chicago Bulls", "Los Angeles Lakers", "San Antonio Spurs", "Oklahoma City Thunder", "Miami Heat", "Houston Rockets"))
@@ -70,7 +72,8 @@ ggplot(b_h)+
   geom_point(aes(x = Opponent, y = Attendance, color = Result))+
   theme(axis.text.x = element_text(angle = 90))+
   facet_grid(.~year)+
-  ylim(15000,19000)
+  ylim(15000,19000)+
+  ggtitle("Boston Celtics Vs Popular Teams")
 
 #Boston Celtics Vs Less Popular Teams
 c_h <- filter(b_celtics, b_celtics$Opponent %in% c("Toronto Raptors", "Denver Nuggets", "Charlotte Bobcats", "Orlando Magic", "Utah Jazz", "Indiana Pacers", "Dallas Mavericks", "Phoenix Suns"))
@@ -78,10 +81,11 @@ ggplot(c_h)+
   geom_point(aes(x = Opponent, y = Attendance, color = Result))+
   theme(axis.text.x = element_text(angle = 90))+
   facet_grid(.~year)+
-  ylim(15000,19000)
+  ylim(15000,19000)+
+  ggtitle("Boston Celtics Vs Less Popular Teams")
 
 ```
-**_We can see that the plot for Boston Celtics Vs Popular Teams has a consistently higher attendance (above 17000), comapred to Boston Celtics Vs Less Popular Teams. Though it is not a large variation, spectators seem to enjoy games between popular teams more. Existing rivalry between the teams does not seem to have much effect on spectator attendance. Notice that the game Celtics Vs Denver Nuggets in 2015 has an unusually low attendance. This may be because the Celtics lost the previous four games (as shown in the table below)._**
+**_We can see that the plot for Boston Celtics Vs Popular Teams has a slightly higher attendance (above 17000), comapred to Boston Celtics Vs Less Popular Teams. Though it is not a large variation, spectators seem to enjoy games between popular teams more. Existing rivalry between the teams does not seem to have much effect on spectator attendance. Notice that the game Celtics Vs Denver Nuggets in 2015 has an unusually low attendance. This may be because the Celtics lost the previous four games (as shown in the table below)._**
 
 ```{r}
 library(knitr)
