@@ -2,7 +2,10 @@
 title: "MA615 Mid-term Project"
 author: "Megha"
 date: "October 16, 2018"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -89,7 +92,7 @@ ggplot(c_h)+
 
 ```{r}
 library(knitr)
-include_graphics("C:/Users/GP/Desktop/MEGHA/RGitHub/MA615/Mid-term Project/Capture.png")
+include_graphics("C:/Users/GP/Desktop/MEGHA/RGitHub/MA615/Mid-term Project/Data.jpg")
 ```
 
 
