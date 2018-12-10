@@ -1,0 +1,31 @@
+---
+title: "MA615 Assignment New Package - Notifier"
+author: "Megha Pandit"
+date: "December 10, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The R package explored in this assignment is 'notifier'. Package 'notifier' can be used to send desktop notifications from R, on macOS, Windows, and Linux. Since this package is available only on GitHub, as of now, we load devtools library and then install notifier using the following code:
+```{r}
+library(devtools)
+devtools::install_version("notifier")
+
+library(notifier)
+```
+
+We now go ahead to frame the title, text amd image for our notification.
+
+```{r}
+notify(
+  title = "Merry Christmas & a Happy New Year!",
+  msg = c("Wish", "You", "and", "Your", "Family", "a", "Merry", "Christmas", "and", "a", "Happy", "New", "Year!", "Be", "Good,", "and", "see", "what", "Santa", "gives", "you", "this", "year!"),
+  image = "Santa.png"
+  
+)
+```
+
+
