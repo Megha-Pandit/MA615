@@ -1,3 +1,6 @@
+#Link to the published shiny app - https://meghapandit.shinyapps.io/Final_Project/
+
+
 library(shiny)
 library(shinydashboard)
 library(data.table)
@@ -5,8 +8,9 @@ library(dplyr)
 library(lubridate)
 library(ggplot2)
 library(benford.analysis)
+
 #Reading the Kickstarter Projects data
-kick <- fread("C:/Users/GP/Desktop/MEGHA/RGitHub/MA615/Final_Project/ksprojects.csv")
+kick <- fread("ksprojects.csv")
 
 #Data Cleaning
 
