@@ -1,0 +1,324 @@
+---
+title: "MA615 Final Project Slides"
+author: "Megha Pandit"
+date: "December 17, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(officer)
+library(magrittr)
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(kableExtra)
+library(png)
+library(grid)
+library(benford.analysis)
+library(BenfordTests)
+library(data.table)
+```
+
+
+
+```{r}
+#Reading the pptx template
+pres <- read_pptx("slide.pptx")
+layout_properties(pres)
+
+master <- "Integral"
+
+pres %<>% add_slide(layout = "Title Slide", master = master) %<>%
+  ph_with_text(type = "ctrTitle", str = "Benford Analysis of\nKickstarter Projects")%<>%
+  ph_with_text(type = "subTitle", str = "MA615 Final Project\n By: Megha Pandit")%<>%
+  ph_with_text(type = "sldNum", str = "1")
+
+pres %<>% add_slide(layout = "Title and Content", master = master)%<>%
+  ph_with_text(type = "title", str = "Kickstarter Projects")%<>%
+  ph_with_ul(type = "body", index = 1,
+             str_list = c("Kickstarter is an online crowdfunding platform",
+                          "Notable projects include 'Sun Come Up', 'Incident in New Baghdad', 'Pebble Time', 'Coolest Cooler' and 'Exploding Kittens'",
+                          "Projects have a goal amount and are supported by 'backers'",
+                          "Backers pledge money to the projects"),
+             level_list = c(1,1,1,1))%<>%
+  ph_with_img(type = "pic", src = "image1.png", height = 2)
+
+pres %<>% add_slide(layout = "Title and Content", master = master) %<>%
+  ph_with_text(type = "title", str = "Kickstarter Projects") %<>%
+  ph_with_ul(type = "body", str_list = c("Not all Kickstarter projects are genuine",
+                                         "Questions have been raised on fraudulent and controversial projects",
+                                         "Projects lack originality and genuity",
+                                         "Pledged money not used for project purposes",
+                                         "Deliverables do not meet the backers' expectations"),
+             level_list = c(1,1,1,1,1))%<>%
+  ph_with_img(type = "pic", src = "image2.png", height = 2)
+
+pres %<>% add_slide(layout = "Section Header", master = master) %<>%
+  ph_with_text(type = "title", str = "Project Goal, Data and Variables")
+
+pres %<>% add_slide(layout = "Title and Content", master = master) %<>%
+  ph_with_text(type = "title", str = "Objective") %<>%
+  ph_with_ul(type = "body", str_list = c("To examine the data for fraudulent projects",
+                                         "More specifically, number of backers and the amount pledged for the projects",
+                                         "Data:",
+                                         "Kickstarter Projects launched in the years 2009 through 2017",
+                                         "Data acquired from Kickstarter Platform",
+                                         "Variables:",
+                                         "Project ID, name and category",
+                                         "Project status, launch date, deadline, country of launch",
+                                         "Number of backers, goal amount of project",
+                                         "amount pledged, currency, amount in pledged in USD"),
+             level_list = c(1,1,1,2,2,1,2,2,2,2))
+
+pres %<>% add_slide(layout = "Section Header", master = master) %<>%
+  ph_with_text(type = "title", str = "Exploratory Data Analysis")
+
+```
+
+
+
+```{r, echo=FALSE, include=FALSE, message=FALSE, warning=FALSE}
+#Reading data and all the ggplots 
+#Reading the Kickstarter Projects data
+kick <- fread("ksprojects.csv")
+
+#Data Cleaning
+
+#Formatting deadline date into mdy format
+kick$deadline <- mdy(kick$deadline)
+
+#Splitting the date and time in 'launched' column
+kick$Launch_Date <- sapply(strsplit(as.character(kick$launched), " "), "[", 1)
+kick$Launch_Time <- sapply(strsplit(as.character(kick$launched), " "), "[", 2)
+
+#Removing the Launch_Time and launched columns
+kick <- kick[, -c(17,8)]
+
+#Rearranging columns for better analysis
+kick <- kick[,c(1,2,3,4,9,15,6,10,11,7,14,8,12,13,5)]
+
+#Omitting the NAs in the dataset
+kick <- na.omit(kick)
+
+#Formatting the launch date in the mdy format
+kick$Launch_Date <- mdy(kick$Launch_Date)
+
+#Creating the 'year' variable
+kick$year <- substr(kick$Launch_Date, start = 1, stop = 4)
+
+#Removing projects dated 1970!
+kick <- kick[!kick$year == 1970,]
+
+#EDA of the data
+
+#Projects by status
+g1 <- ggplot(data = kick) +
+  aes(x = reorder(state, state, function(x) -length(x)), fill = state) +
+  geom_bar() +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Fig 1.1 Status of the Projects",
+    x = "Status",
+    y = "Number of Projects") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7),
+        plot.title = element_text(size = 9))
+
+#Status of Projects in different categories
+g2 <- ggplot(data = kick) +
+  aes(x = reorder(main_category, main_category, function(x) length(x)), fill = state) +
+  geom_bar(position = "fill") +
+  scale_fill_brewer(palette = "Set1", direction = 1) +
+  labs(title = "Fig 1.2 Status of projects in different categories",
+    x = "Category") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))+ coord_flip()
+
+#Projects by Country
+g3 <- ggplot(data = kick) +
+  aes(x = reorder(country, country, function(x) -length(x))) +
+  geom_bar(fill = "#e7298a") +
+  labs(title = "1.3 Number of Projects by Country",
+    y = "number of projects", x = "country") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 9))
+
+#Projects by Currency
+g4 <- ggplot(data = kick) +
+  aes(x = reorder(currency, currency, function(x) -length(x))) +
+  geom_bar(fill = "#ff7f00") +
+  labs(y = "number of projects", x = "currency", title = "1.4 Number of Projects by Currency") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 9))
+
+#Project status vs. Number of backers
+g5 <- ggplot(data = kick) +
+  aes(x = state, y = backers) +
+  geom_boxplot(fill = "#0c4c8a") +
+  labs(title = "1.5 Project status vs Number of backers",
+    x = "Status of the project",
+    y = "Number of backers") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))
+
+#Removing the outliers
+kick <- kick[kick$backers < 100000,]
+
+#Projects by year
+g6 <- ggplot(data = kick) +
+  aes(x = year) +
+  geom_bar(fill = "#6a51a3") +
+  labs(title = "1.6 Projects by Year",
+    y = "number of projects") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7),
+        plot.title = element_text(size = 10), axis.text.y = element_text(size = 7))
+
+#Project status by year
+g7 <- ggplot(data = kick) +
+  aes(x = year, fill = state) +
+  geom_bar(position = "fill") +
+  scale_fill_brewer(palette = "Dark2", direction = -1) +
+  labs(title = "1.7 Project Status by Year", y = "proportion of projects")+
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7, angle = 90, vjust = 0.5),
+        plot.title = element_text(size = 10), axis.text.y = element_text(size = 7))
+
+```
+
+
+```{r}
+pres %<>% add_slide(layout = "Content with Caption", master = master) %<>%
+  ph_with_text(type = "title", str = "Projects by Year") %<>%
+  ph_with_gg(type = "pic", value = g6)%<>%
+  ph_with_gg(type = "pic", value = g7, index = 2)%<>%
+  ph_with_ul(type = "body", str_list = c("Largest number of Projects in 2015",
+                                         "124 projects in 2018- all either live or cancelled at the time of data collection", "Projects mostly failed or were successful"), level_list = c(1,1,1))
+
+pres %<>% add_slide(layout = "Content with Caption", master = master)%<>%
+  ph_with_text(type = "title", str = "Projects by Status") %<>%
+  ph_with_gg(type = "pic", value = g1)%<>%
+  ph_with_gg(type = "pic", value = g2, index = 2)%<>%
+  ph_with_ul(type = "body", str_list = c("52.7% failed, 35.7% succeeded, 10.3% cancelled, 0.7% live and 0.4% suspended", "Most of the projects fall into the Film & Video category, followed by Music"),
+             level_list = c(1,1))
+
+pres %<>% add_slide(layout = "Content with Caption", master = master) %<>%
+  ph_with_text(type = "title", str = "Projects by Country and Currency")%<>%
+  ph_with_gg(type = "pic", value = g3)%<>%
+  ph_with_gg(type = "pic", value = g4, index = 2)%<>%
+  ph_with_ul(type = "body", str_list = c("A majority of the projects were launched in the USA",
+                                         "The amount pledged for most of the projects was in USD"),
+             level_list = c(1,1))
+
+pres %<>% add_slide(layout = "Two Content", master = master) %<>%
+  ph_with_text(type = "title", str = "Number of Backers for the Projects") %<>%
+  ph_with_gg(type = "pic", value = g5) %<>%
+  ph_with_ul(type = "body", str_list = c("Projects with more than 150,000 backers and more than 200,000 backers", "Project names - 'Exploding Kittens' and 'Fidget Cube'", "These projects rank among the ten most successful Kickstarter projects by the total funds pledged", "Outliers in the data"), 
+             level_list = c(1,1,1,1))
+
+pres %<>% add_slide(layout = "Section Header", master = master) %<>%
+  ph_with_text(type = "title", str = "Benford Analysis")
+
+pres %<>% add_slide(layout = "Two Content", master = master)%<>%
+  ph_with_text(type = "title", str = "Benford's Law")%<>%
+  ph_with_ul(type = "body", str_list = c("Benford's Law - also the Law of Anomalous Numbers, and the First-Digit Law", "In many naturally occuring numbers, the leading significant digit is likely to be small",
+                                         "The digit 1 is likely to occur as the leading significant digit 30% of the times, 2 is likely to occur 17.6% of the times, and the digit 9, less than 5% of the times"),
+             level_list = c(1,2,2)) %<>%
+  ph_with_img(type = "pic", src = "benford.jpg")
+
+```
+
+```{r, echo=FALSE, include=FALSE, message=FALSE, warning=FALSE}
+
+#Removing projects in 2018
+kick <- kick[!kick$year == 2018,]
+
+#Benford's Law for first digits of the number of backers
+bfd.backers <- benford(kick$backers, number.of.digits = 1)
+bfd.backers
+p1 <- plot(bfd.backers)
+
+#Benford's Law for first two digits of the number of backers
+bfd1.backers <- benford(kick$backers, number.of.digits = 2)
+bfd1.backers
+p2<- plot(bfd1.backers)
+
+#Histogram of number of backers 
+#1 is added to avoid producing NaNs
+log.backers <- log(kick$backers + 1)
+
+h1 <- ggplot(kick, aes(log.backers))+ geom_histogram(fill = "pink", color = "deeppink2")+
+  labs(x = "Log Number of Backers", title = "1.8 Histogram of the log of number of backers")+
+  theme_minimal()+
+  theme(axis.title = element_text(size = 7), axis.text.x = element_text(size = 7, angle = 90, vjust = 0.5),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))
+
+#Benford Analysis for the first digits of total funds pledged
+bfd.pledge <- benford(kick$usd_pledged_real, number.of.digits = 1)
+bfd.pledge
+p3 <- plot(bfd.pledge)
+
+#Benford Analysis for the first two digits of total funds pledged
+bfd1.pledge <- benford(kick$usd_pledged_real, number.of.digits = 2)
+bfd1.pledge
+p4 <- plot(bfd1.pledge)
+
+#Histogram of log of total funds pledged
+log.pledge <- log(kick$usd_pledged_real + 1)
+h2 <- ggplot(kick, aes(log.pledge))+ geom_histogram(fill = "orange", color = "red", alpha = 0.6)+
+  labs(x = "Log Total Funds Pledged", title = "1.9 Histogram of the log of total funds pledged")+
+  theme_minimal()+
+  theme(axis.title = element_text(size = 7), axis.text.x = element_text(size = 7, angle = 90, vjust = 0.5),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))
+
+```
+
+
+```{r}
+pres %<>% add_slide(layout = "Content with Caption", master = master) %<>%
+  ph_with_text(type = "title", str = "Benford Analysis for Number of Backers")%<>%
+  ph_with_ul(type = "body", str_list = c("Plot above shows first digit distribution, plot below shows first two digits distribution", "Red Line - Benford's Law, blue bars - digits in the data", "First digits follow Benford's Law", "Frequency distribution of first two digits looks similar to the Benford frequency distribution", "Discrepancies between the frequencies of occurences of first two digits in the data and the frequencies given by Benford's Law"),
+             level_list = c(1,2,1,1,1))%<>%
+   ph_with_img(type = "pic", src = "b1.jpg")%<>%
+  ph_with_img(type = "pic", src = "b11.jpg", index = 2)
+
+pres %<>% add_slide(layout = "Two Content", master = master) %<>%
+  ph_with_text(type = "title", str = "Distribution of log Number of Backers") %<>%
+  ph_with_img(type = "pic", src = "h1.jpg")%<>%
+  ph_with_ul(type = "body", str_list = c("Large number of projects with zero backers", "May be a major reason for following Benford's Law"), level_list = c(1,2))
+
+pres %<>% add_slide(layout = "Content with Caption", master = master) %<>%
+  ph_with_text(type = "title", str = "Benford Analysis for Total Funds Pledged")%<>%
+  ph_with_ul(type = "body", str_list = c("Plot above shows first digit distribution, plot below shows first two digits distribution", "Red Line - Benford's Law, blue bars - digits in the data", "First digits follow Benford's Law", "Deviation at 5 and large deviations at 10 and 49"),
+             level_list = c(1,2,1,1))%<>%
+   ph_with_img(type = "pic", src = "b2.jpg")%<>%
+  ph_with_img(type = "pic", src = "b21.jpg", index = 2)
+ 
+pres %<>% add_slide(layout = "Two Content", master = master) %<>%
+  ph_with_text(type = "title", str = "Distribution of log total funds pledged") %<>%
+  ph_with_img(type = "pic", src = "h2.jpg")%<>%
+  ph_with_ul(type = "body", str_list = c("Large number of projects with zero backers and therefore zero funds pledged", "May be a major reason for following Benford's Law", "However, histogram peaks at around 7", "Value of funds pledged at this point is around 1906USD, the leading digit being 1 but the second digit being 9"), level_list = c(1,2,1,2))
+
+pres %<>% add_slide(layout = "Title and Content", master = master) %<>%
+  ph_with_text(type = "title", str = "Conclusion")%<>%
+  ph_with_ul(type = "body", str_list = c("Zero backers and hence zero funds pledged may be a reason for the digits following Benford's Law", "Possibility of fabricated data", "For potential future work:", "Regression analysis along with Benford Analysis to compare and draw better conclusions"),
+             level_list = c(1,1,1,2))
+
+pres %<>% add_slide(layout = "Section Header", master = master)%<>%
+  ph_with_text(type = "title", str = "Thank You!")
+
+
+
+print(pres, target = "Final_Project_Slides.pptx") 
+```

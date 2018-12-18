@@ -1,0 +1,372 @@
+---
+title: 
+author:
+date:
+output: pdf_document
+geometry: "left=2cm,right=2cm,top=2cm,bottom=2cm"
+
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyverse)
+library(tidytext)
+library(tidyr)
+library(lubridate)
+library(knitr)
+library(kableExtra)
+library(png)
+library(grid)
+library(benford.analysis)
+library(BenfordTests)
+library(data.table)
+```
+
+```{r, echo=FALSE, out.width="100%", fig.align='left'}
+include_graphics("C:/Users/GP/Desktop/MEGHA/RGitHub/MA615/Final_Project/ks1-1.jpg")
+```
+
+#Abstract
+
+_"Disrupting", and "First-ever" are two of the many phrases associated with a Kickstarter project. Some incredibly interesting projects have found success on Kickstarter. For many entrepreneurs, Kickstarter is where good ideas meet good money and make dreams a reality. But not every project that goes on Kickstarter emerges successful. There have been many fraudulent and controversial projects on the platform that came to the attention of the general public. This study examines the data on kickstarter projects that were launched in the years 2009 through 2017. Benford analysis has been performed to check for anomalies in the number of backers and the total funds pledged for these projects. Both the variables seem to follow Benford's Law implying that there are no fabricated figures in the data. This study further examines the reasons behind the adherence of these variables to Benford's Law._ 
+
+$~$
+
+#Introduction
+
+Founded in 2009, Kickstarter is an American public-benefit corporation that maintains a global crowdfunding platform focused on creativity and merchandising^1^. It is an online crowdfunding platform for gathering money from the public. The platform is open to backers from anywhere around the world. However, Kickstarter advises the backers to use their own judgement while backing a project because there is no guarantee that people who post the project will deliver, or use the money for the project, or even that the project deliverable will meet the backers' expectations. 
+
+Since its founding, Kickstarter has been a funding platform for more than 150,000 projects, the collective funds pledged for which total to roughly 3.5billion USD, as of October 2018^2^. There are 13 categories and 36 sub-categories of projects on Kickstarter. The categories include Art, Comics, Dance, Design, Fashion, Film & Video, Food, Games, Music, Photography, Publishing, Technology, and Theatre. Film & Video, Music and Games are the three categories that have raised the largest amount of money on the platform. Projects such as the documentary shorts "Sun Come Up" and "Incident in New Baghdad" were nominated for an Academy Award^3,4^, and art projects such as "EyeWriter" and "Hip-Hop Word Count" were chosen for an exhibition at the Museum of Modern Art in 2011^5^. Pebble Time, Coolest Cooler, and Kingdom Death: Monster 1.5 are some of the notable projects that rank among the top ten successfully completed projects by the total funds pledged. 
+
+However, as said, "All that glitters is not gold!". Not all projects that go on Kickstarter are successful, and not all of them are genuine. There have been fraudulent and controversial projects on the platform. Although Kickstarter took measures to remove fraudulent projects from its platform, there were questions about the originality of its projects. People questioned the apparent duplication of graphics from other sources, the unrealistic performance and price claims, and the failure of the project sponsors to deliver on prior projects. This study examines the anomalies in the Kickstarter projects launched in the years 2009 through 2017, using Benford's Law. Benford's Law, or the law of first digits, is an observation about the frequency distribution of the leading digits in sets of numerical data. Using Benford's Law, this study aims to detect abnormalities in the number of backers and the total funds pledged for the projects. 
+
+$~$
+
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+#Reading the Kickstarter Projects data
+kick <- fread("ksprojects.csv")
+
+#Data Cleaning
+
+#Formatting deadline date into mdy format
+kick$deadline <- mdy(kick$deadline)
+
+#Splitting the date and time in 'launched' column
+kick$Launch_Date <- sapply(strsplit(as.character(kick$launched), " "), "[", 1)
+kick$Launch_Time <- sapply(strsplit(as.character(kick$launched), " "), "[", 2)
+
+#Removing the Launch_Time and launched columns
+kick <- kick[, -c(17,8)]
+
+#Rearranging columns for better analysis
+kick <- kick[,c(1,2,3,4,9,15,6,10,11,7,14,8,12,13,5)]
+
+#Omitting the NAs in the dataset
+kick <- na.omit(kick)
+
+#Formatting the launch date in the mdy format
+kick$Launch_Date <- mdy(kick$Launch_Date)
+
+#Creating the 'year' variable
+kick$year <- substr(kick$Launch_Date, start = 1, stop = 4)
+
+#Removing projects dated 1970!
+kick <- kick[!kick$year == 1970,]
+```
+
+#Exploratory Data Analysis
+
+##Data
+
+The data worked on in this study is of Kickstarter projects launched in the years 2009 through 2017. Data has been acquired from the Kickstarter Platform. The variables in the data are:
+
+- Project ID, project name, project category
+
+- Project status, launch date, deadline date
+
+- Number of backers for the project, country in which the project was launched, goal amount and real goal amount in USD, total amount pledged and the real USD amount pledged for the project, and the currency in which the amount was pledged. 
+
+The USD conversions for the real goal amount and the real amount pledged for the project were generated from convert ks pledges to usd script done by tonyplaysguitar.
+
+##Methods:
+
+Firstly, an exploratory data analysis is done to understand the data better. Since there have been many fraudulent projects on the Kickstarter platform, Benford's analysis is performed to check for anomalies in the data. Following is a visualization of the different variables in the data.
+
+```{r, fig.height=3, fig.width=5, fig.align='center', echo=FALSE}
+#EDA of the data
+
+#Projects by status
+ggplot(data = kick) +
+  aes(x = reorder(state, state, function(x) -length(x)), fill = state) +
+  geom_bar() +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Fig 1.1 Status of the Projects",
+    x = "Status",
+    y = "Number of Projects") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7),
+        plot.title = element_text(size = 9))
+
+```
+
+Fig 1.1 shows the number of projects which failed, were successful, cancelled or suspended, or are live. There are 197,611 failed projects, which account for 52.7% and 133,851 successful projects, which account for 35.7% of the total number of projects in the dataset. 10.3% of the projects were cancelled, 0.4% were suspended and 0.7% were live at the time the data was collected. 
+
+$~$
+
+```{r, fig.height=3, fig.align='center', echo=FALSE}
+#EDA
+#Status of Projects in different categories
+ggplot(data = kick) +
+  aes(x = reorder(main_category, main_category, function(x) length(x)), fill = state) +
+  geom_bar(position = "fill") +
+  scale_fill_brewer(palette = "Set1", direction = 1) +
+  labs(title = "Fig 1.2 Status of projects in different categories",
+    x = "Category") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))+ coord_flip()
+```
+Fig 1.2 shows the status of the projects in each of the categories. The largest number of projects fall into the Film & Video category followed by Music. Since successful and failed project account for 88.4% of all the projects, there are large proportions of projects in all the categories that were either successful or failed.
+
+$~$
+
+```{r, fig.height=3, fig.width=3.5, fig.show='hold', echo=FALSE}
+#EDA
+#Projects by Country
+ggplot(data = kick) +
+  aes(x = reorder(country, country, function(x) -length(x))) +
+  geom_bar(fill = "#e7298a") +
+  labs(title = "1.3 Number of Projects by Country",
+    y = "number of projects", x = "country") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 9))
+
+#Projects by Currency
+ggplot(data = kick) +
+  aes(x = reorder(currency, currency, function(x) -length(x))) +
+  geom_bar(fill = "#ff7f00") +
+  labs(y = "number of projects", x = "currency", title = "1.4 Number of Projects by Currency") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 6),
+        plot.title = element_text(size = 9))
+```
+From Fig 1.3 and 1.4, we see that most of the projects were launched in the USA and most of the amount pledged for these projects was in US Dollars. 78% of the projects were launched in the US and the amount pledged for these projects was in USD.  
+
+
+```{r, fig.height=3, fig.width=5, fig.align='center', echo=FALSE}
+#Project status vs. Number of backers
+ggplot(data = kick) +
+  aes(x = state, y = backers) +
+  geom_boxplot(fill = "#0c4c8a") +
+  labs(title = "1.5 Project status vs Number of backers",
+    x = "Status of the project",
+    y = "Number of backers") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))
+```
+
+```{r, echo=FALSE}
+backr <- kick[,c(2,4,5,6,7,8,9,11,13,14,15)]
+kable(backr[backr$backers > 150000,], "latex", booktabs = T) %>%
+  kable_styling(latex_options = c("striped", "scale_down"))
+```
+
+Fig 1.5 shows the number of backers for projects with different status. We see that there are projects for which the number of backers is more than 200,000 and more than 100,000. These projects are considered outliers in the dataset and can be omitted for further analysis.
+
+The project with 219382 backers was a Tabletop Games project titled "Exploding Kittens" launched in the US. This project ranks 7th among the ten largest successfully completed kickstarter projects by the total funds pledged. It had a goal amount of 10000USD and the amount pledged for this project was 8,782,572 USD. This project received much more than its goal amount in just a month from its launch date.
+
+The project with 154926 backers was a Product Design project titled "Fidget Cube: A Vinyl Desk Toy" launched in the US. The project had a goal amount of 15000USD and and the amount pledged for this project was 6,465,690 USD. Note that the amount in USD pledged to the project according to Kickstarter is 13770 but the USD pleged in real, i.e., conversion as made by Fixer.io (Foreign exchange rates and currency conversion JSON API) says 6,465,690 USD. This discrepancy is large and suspicious given that the currency the amount was pledged in was USD. 
+
+$~$
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+#Removing the outliers
+kick <- kick[kick$backers < 100000,]
+```
+
+
+```{r, message=FALSE, warning=FALSE, fig.height=3, fig.width=3.5, fig.show='hold', echo=FALSE}
+
+#Projects by year
+ggplot(data = kick) +
+  aes(x = year) +
+  geom_bar(fill = "#6a51a3") +
+  labs(title = "1.6 Projects by Year",
+    y = "number of projects") +
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))
+
+#Project status by year
+ggplot(data = kick) +
+  aes(x = year, fill = state) +
+  geom_bar(position = "fill") +
+  scale_fill_brewer(palette = "Dark2", direction = -1) +
+  labs(title = "1.7 Project Status by Year", y = "proportion of projects")+
+  theme_minimal()+
+  theme(legend.text = element_text(size = 7), legend.title = element_text(size = 7),
+        axis.title = element_text(size = 7), axis.text.x = element_text(size = 7, angle = 90, vjust = 0.5),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))
+```
+
+Fig 1.6 shows the number of projects in each year. 2015 had the largest number of projects compared to other years in the data. There were only 124 projects in 2018 at the time when the data was collected. From Fig 1.7, we see that most of these projects were live at the time. Projects in 2018 have been excluded from further analysis.
+
+$~$
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#Year wise plot of projects by status
+ggplot(data = kick)+
+  aes(x = state, fill = state)+
+  geom_bar()+
+  labs(x = "Project status", title = "1.7 Year-wise plot of projects by status")+
+  theme(axis.text.x = element_text(size = 7, angle = 90, vjust = 0.5))+
+  facet_wrap(year~.)
+```
+From 1.8, the largest numbers of failed projects were in 2014 amd 2015. This is surprising since Kickstarter had its biggest year in 2014 crossing half a billion dollars in pledges^6^. 
+
+$~$
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+#Removing projects in 2018
+kick <- kick[!kick$year == 2018,]
+```
+
+
+#Results and Discussion
+
+After understanding the data, there seems to be a possibility of abnormalities in the number of backers and the total funds pledged in USD for the projects. As discussed in the introduction section, many projects on Kickstarter were questioned for their genuity, originality and unrealistic goals. To detect such abnormalities in the data taken for this study, Benford Analysis is employed. Benford's Law states that in most of the naturally occuring sets of numbers, the leading significant digit is likely to be small. For example, the digit 1 is the leading digit 30% of the times while 9 appears as the leading digit less than 5% of the times. Benford's Law makes predictions even for the second and third digits, and digit combinations as well. 
+
+A set of numbers follows Benford's Law if the leading digit $d (d \epsilon \{1,2,...,9\})$ appears with probability P such that
+$$P(d) = log_{10}(d+1) - log_{10}(d) = log_{10}(\frac{d+1}{d}) = log_{10}(1 + \frac{1}{d})$$
+For example, the probability of the digit 3 occuring as the leading digit is given by:
+$$P(3) = log_{10}(1 + \frac{1}{3})$$
+Therefore,
+$$P(3) = 0.1238$$ or 12.38%.
+According to Benford's Law, the probability that the digit 3 occurs as the leading significant digit is 12.38%.
+
+In this project, Benford's Law is applied to the number of backers and the total amount in USD that was pledged for the projects. 
+###Benford's Law on the number of backers for the projects
+
+
+```{r, echo=FALSE}
+#Benford's Law for first digits of the number of backers
+bfd.backers <- benford(kick$backers, number.of.digits = 1)
+bfd.backers
+plot(bfd.backers)
+```
+
+According to the above plots, the first digits of the number of backers seem to follow Benford's Law. The combination of the first two digits has also been plotted to see if the number of backers still follows Benford's Law. 
+
+$~$
+
+```{r, echo=FALSE}
+bfd1.backers <- benford(kick$backers, number.of.digits = 2)
+bfd1.backers
+plot(bfd1.backers)
+```
+
+As seen in the first plot above, there are large deviations in the frequencies of occurences of the digits and the frequencies according to Benford's Law. A histogram of the number of backers should give one an idea about how the numbers are distributed and hence either reinforce or weaken the adherence to Benford's Law. Since the range of the number of backers is large, log of the number of backers is plotted. 
+
+$~$
+
+```{r, message=FALSE, warning=FALSE, fig.height=3, fig.width=3.5, echo=FALSE}
+#Histogram of number of backers 
+#1 is added to avoid producing NaNs
+log.backers <- log(kick$backers + 1)
+
+ggplot(kick, aes(log.backers))+ geom_histogram(fill = "pink", color = "deeppink2")+
+  labs(x = "Log Number of Backers", title = "1.9 Histogram of the log of number of backers")+
+  theme_minimal()+
+  theme(axis.title = element_text(size = 7), axis.text.x = element_text(size = 7, angle = 90, vjust = 0.5),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))
+  
+```
+
+Fig 1.9 shows the distribution of log(number of backers + 1). There are a large number of projects at 0, i.e., with one backer. This may or may not be the reason why the number of backers may be following Benford's Law. Since there could be fraudulent activities related to the total funds pledged for the Kickstarter projects, the next step is to apply Benford's Law to the total funds pledged. 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#Benford Analysis for the first digits of total funds pledged
+bfd.pledge <- benford(kick$usd_pledged_real, number.of.digits = 1)
+bfd.pledge
+plot(bfd.pledge)
+```
+
+From the first plot above that shows the frequency of the occurence of first digits in the data, it is seen that the digits pretty much follow Benford's Law. However, there is a discrepancy at 5. The frequency of 5 occuring as the first digit in the data is more than that given by Benford's Law. The next step is to check for the combination of the first two digits.
+
+```{r, echo=FALSE}
+#Benford Analysis for the first two digits of total funds pledged
+bfd1.pledge <- benford(kick$usd_pledged_real, number.of.digits = 2)
+bfd1.pledge
+plot(bfd1.pledge)
+```
+From the above plots, there are deviations from Benford's Law in almost all the combinations of first two digits. The largest deviations are at 10 and 49. A histogram of the total amount pledged for each of the projects is plotted.
+
+$~$
+
+```{r, message=FALSE, warning=FALSE, fig.height=3, fig.width=3.5, echo=FALSE}
+#Histogram of log of total funds pledged
+log.pledge <- log(kick$usd_pledged_real + 1)
+ggplot(kick, aes(log.pledge))+ geom_histogram(fill = "orange", color = "red", alpha = 0.6)+
+  labs(x = "Log Total Funds Pledged", title = "1.10 Histogram of the log of total funds pledged")+
+  theme_minimal()+
+  theme(axis.title = element_text(size = 7), axis.text.x = element_text(size = 7, angle = 90, vjust = 0.5),
+        plot.title = element_text(size = 9), axis.text.y = element_text(size = 7))
+
+```
+
+From Fig 1.10, there are more than 50000 projects for which the amount pledged was 0 (probably because of 0 backers). The histogram peaks at around 7 (or in between 7 and 8). Since the distribution is of log of total funds, we have:
+$$e^7 = 1096.63$$ and $$e^{7.5} = 1808.04$$
+These numbers all start with 1. This is similar for values around e^5^ as well.
+
+Considering all the above, the total funds pledged for each project seem to follow Benford's Law. However, since there are a large number of projects for which the number of backers is zero and total funds pledged is also zero, it could be useful to continue the analysis to look at the first digits and the differences from Benford's Law by using the suspectsTable function.
+
+```{r, fig.show='hold', echo=FALSE}
+#Differences from Benford's Law in first digits of number of backers
+kable(suspectsTable(bfd = bfd.backers, by = "absolute.diff"), "latex", booktabs = T) %>%
+  kable_styling(latex_options = c("striped"))
+
+kable(suspectsTable(bfd = bfd.pledge, by = "absolute.diff"), "latex", booktabs = T) %>%
+  kable_styling(latex_options = c("striped"))
+
+```
+
+The largest deviations in both the number of backers and in the total funds pledged are for the digit 1. The smallest deviations are for the digit 3 in both the cases.
+
+#Conclusion
+Since there are many projects that have zero backers and hence zero funds pledged towards them, it may have led the first digits of both these variables to follow Benford's Law. The possibility of these variables not following Benford's Law brings in the possibility of the fake data or data being fabricated. There could have been projects that boasted of a fake number of backers just to attract more backers and more funds. Or, as known, there were projects that deliberately failed to deliver on their goals to their backers. This is one of the reasons Kickstarter does not take responsibility for any refunds. There is also an other way around, where the backers fail to deliver on their promises. Examining all these cases would go beyond a mere Benford Analysis.
+
+#Potential Future Work
+In addition to Benford Analysis, a regression coud be done on the variables in question to obtain the statistical estimates (regression coefficients). This data could be scrutinized for any possible deviations from Benford's Law. This could be compared to results from Benford analysis to draw better conclusions. 
+
+\pagebreak
+
+#References
+
+1. Isaac, Mike and Gelles, David. Kickstarter Focuses Its Mission on Altruism Over Profit. Sep 20, 2015. The New    York Times.
+   https://www.nytimes.com/2015/09/21/technology/kickstarters-altruistic-vision-profits-as-the-means-not-the-mission.html
+
+2. Bowden, Tanner. The Most Successful Outdoor Kickstarter Projects of All Time. Oct 23, 2018. Gear Patrol.
+   https://gearpatrol.com/2018/10/23/most-successful-outdoor-kickstarter-projects/
+   
+3. NPR Staff. The Love Story BEhind Oscar Nominee 'Sun Come Up'. Feb 26, 2011. npr.
+   https://www.npr.org/2011/02/26/134083564/The-Love-Story-Behind-Oscar-Nominee-Sun-Come-Up
+   
+4. Montgomery, David. What happened in Iraq? Feb 21, 2012. The Washington Post. 
+   https://www.washingtonpost.com/lifestyle/style/what-happened-in-iraq/2012/02/17/gIQA08oCSR_story.html?noredirect=on&utm_term=.b9a42c8a2f01
+   
+5. Holm, Elizabeth. KSR IRL: Kill Screen, EyeWriter, and Hip-Hop Word Count @ MoMA's Talk To Me exhibition.
+   July 26, 2011. The Kickstarter Blog.
+   https://www.kickstarter.com/blog/ksr-irl-kill-screen-eyewriter-and-hip-hop-word-cou
+   
+6. Luckerson, Victor. Kickstarter Passed Half a Billion Dollars in Pledges in 2014. Jan 5, 2015. TIME.
+   http://time.com/3653540/kickstarter-year-in-review-2014/
+
+   
